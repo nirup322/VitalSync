@@ -62,15 +62,14 @@ def find_arduino_ports():
     all_ports = list(serial.tools.list_ports.comports())
     return [p.device for p in all_ports if any(kw in (p.description or "").lower() for kw in ["arduino", "usb", "uart", "cp210", "ch340", "espressif"])]
 
-def get_new_patient():
+def get_new_patient(name=None):
     return {
-        "name": fake.name(),
+        "name": name.strip() if name and name.strip() else fake.name(),
         "age": random.randint(18, 85),
         "id": fake.uuid4()[:8].upper(),
         "location": f"Ward {random.randint(1, 10)}, Bed {random.randint(1, 20)}",
         "condition": "Stable"
     }
-
 def sim_step_faker(state, now):
     dt = 0.05
     if now > state["event_end"]:
