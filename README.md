@@ -72,7 +72,7 @@ The dashboard is deployed on **Render** as a Python web service:
 
 | Resource | Link |
 |---|---|
-| Live App (Faker Simulation demo) | [vitalsync-3h24.onrender.com](https://vitalsync-3h24.onrender.com) |
+| Live App  | [vitalsync-3h24.onrender.com](https://vitalsync-3h24.onrender.com) |
 | Source Code | [github.com/nirup322/VitalSync](https://github.com/nirup322/VitalSync) |
 | Firmware (ESP32) | [multisensor_health_monitoring_firebase.ino](https://github.com/nirup322/VitalSync/blob/main/multisensor_health_monitoring_firebase.ino) |
 | License | [MIT License](https://github.com/nirup322/VitalSync/blob/main/LICENSE) |
