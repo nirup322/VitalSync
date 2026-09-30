@@ -120,12 +120,13 @@ with st.sidebar:
         if not ports:
             st.warning("🔌 No ESP32 detected. Check USB cable.")
 
-       st.divider()
+    st.divider()
     patient_name_input = st.text_input("Patient Name", placeholder="Enter patient name")
     if st.button("🔄 New Patient Profile"):
         st.session_state.patient = get_new_patient(patient_name_input)
         st.session_state.raw.clear()
         st.session_state.full_log = []
+
     run = st.toggle("▶️ Stream Data", value=False)
     
     st.divider()
