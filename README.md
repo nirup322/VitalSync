@@ -54,11 +54,7 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-In the sidebar, choose a **Mode**:
-- **Faker Simulation** — generates synthetic vitals for demo/testing
-- **Hardware Serial** — select the correct COM port and baud rate (115200) to read live data from the ESP32
 
-> ⚠️ Hardware Serial mode requires the dashboard to run **locally** on the same machine the ESP32 is physically connected to — cloud-hosted instances (like Render) cannot access a local USB/COM port.
 
 ### Deployment
 
