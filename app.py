@@ -62,9 +62,9 @@ def find_arduino_ports():
     all_ports = list(serial.tools.list_ports.comports())
     return [p.device for p in all_ports if any(kw in (p.description or "").lower() for kw in ["arduino", "usb", "uart", "cp210", "ch340", "espressif"])]
 
-def get_new_patient(name=None):
+def get_new_patient():
     return {
-        "name": name.strip() if name and name.strip() else fake.name(),
+        "name": fake.name(),
         "age": random.randint(18, 85),
         "id": fake.uuid4()[:8].upper(),
         "location": f"Ward {random.randint(1, 10)}, Bed {random.randint(1, 20)}",
@@ -120,10 +120,9 @@ with st.sidebar:
         if not ports:
             st.warning("🔌 No ESP32 detected. Check USB cable.")
 
-    st.divider()
-    patient_name_input = st.text_input("Patient Name", placeholder="Enter patient name")
+        st.divider()
     if st.button("🔄 New Patient Profile"):
-        st.session_state.patient = get_new_patient(patient_name_input)
+        st.session_state.patient = get_new_patient()
         st.session_state.raw.clear()
         st.session_state.full_log = []
 
