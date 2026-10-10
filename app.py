@@ -24,7 +24,7 @@ TABLE_WINDOW_MIN = 5
 MQ_ALERT = 800
 BPM_MAX = 130
 BPM_MIN = 50
-UI_UPDATE_INTERVAL = 0.8 
+UI_UPDATE_INTERVAL = 0.8
 
 # Regex to match your ESP32 Serial output
 LINE_PATTERN = re.compile(
@@ -63,19 +63,22 @@ def find_arduino_ports():
     return [p.device for p in all_ports if any(kw in (p.description or "").lower() for kw in ["arduino", "usb", "uart", "cp210", "ch340", "espressif"])]
 
 def get_new_patient(name=None):
+    # Use the typed name if given, otherwise fall back to a random Faker name
+    final_name = name.strip() if name and name.strip() else fake.name()
     return {
-        "name": name.strip() if name and name.strip() else fake.name(),
+        "name": final_name,
         "age": random.randint(18, 85),
         "id": fake.uuid4()[:8].upper(),
         "location": f"Ward {random.randint(1, 10)}, Bed {random.randint(1, 20)}",
         "condition": "Stable"
     }
+
 def sim_step_faker(state, now):
     dt = 0.05
     if now > state["event_end"]:
         state["current_scenario"] = random.choices(["Normal", "Tachycardia", "Air Hazard", "Leads Off"], weights=[0.7, 0.1, 0.1, 0.1])[0]
         state["event_end"] = now + random.uniform(5, 10)
-    
+
     target_bpm = {"Normal": 72.0, "Tachycardia": 145.0, "Air Hazard": 85.0, "Leads Off": 0.0}[state["current_scenario"]]
     target_mq = 950.0 if state["current_scenario"] == "Air Hazard" else 350.0
     leads_off = state["current_scenario"] == "Leads Off"
@@ -109,10 +112,10 @@ if "raw" not in st.session_state:
 with st.sidebar:
     st.header("⚙️ Connection")
     mode = st.radio("Mode", ["Faker Simulation", "Hardware Serial"])
-    
+
     selected_port = None
     baud_rate = BAUD_RATE_DEFAULT
-    
+
     if mode == "Hardware Serial":
         ports = find_arduino_ports()
         selected_port = st.selectbox("Select COM Port", ports if ports else ["No Ports Found"])
@@ -120,15 +123,15 @@ with st.sidebar:
         if not ports:
             st.warning("🔌 No ESP32 detected. Check USB cable.")
 
-            st.divider()
-    patient_name_input = st.text_input("Patient Name", placeholder="Enter patient name")
+    st.divider()
+    patient_name_input = st.text_input("Patient Name", placeholder="Type patient name here")
     if st.button("🔄 New Patient Profile"):
         st.session_state.patient = get_new_patient(patient_name_input)
         st.session_state.raw.clear()
         st.session_state.full_log = []
 
     run = st.toggle("▶️ Stream Data", value=False)
-    
+
     st.divider()
     st.caption(f"ID: {st.session_state.patient['id']}")
     st.caption(f"Name: {st.session_state.patient['name']}")
@@ -143,7 +146,7 @@ tab_live, tab_history = st.tabs(["📊 Live Monitoring", "📁 Session History"]
 with tab_live:
     p = st.session_state.patient
     st.markdown(f'<div class="patient-box"><span style="color:{COL_ACCENT}; font-weight:bold;">PATIENT:</span> {p["name"]} ({p["age"]}y) &nbsp;|&nbsp; <span style="color:{COL_ACCENT}; font-weight:bold;">LOC:</span> {p["location"]} &nbsp;|&nbsp; <span style="color:{COL_ACCENT}; font-weight:bold;">STATUS:</span> {p["condition"]}</div>', unsafe_allow_html=True)
-    
+
     alert_ph = st.empty()
     c1, c2, c3, c4 = st.columns(4)
     bpm_ph, avg_ph, mq_ph, ecg_stat_ph = c1.empty(), c2.empty(), c3.empty(), c4.empty()
@@ -169,7 +172,7 @@ if run:
             st.stop()
         try:
             ser = serial.Serial(selected_port, baud_rate, timeout=READ_TIMEOUT)
-            time.sleep(2) # Wait for ESP32 reboot
+            time.sleep(2)  # Wait for ESP32 reboot
         except Exception as e:
             st.error(f"Failed to connect to {selected_port}: {e}")
             st.stop()
@@ -205,7 +208,7 @@ if run:
             # Metrics
             style = '<div class="vg-card"><div class="lbl">{}</div><div class="val {}">{}</div></div>'
             b_val, mq_val, lo = parsed['bpm'], parsed['mq'], parsed['lo_plus'] == '1'
-            
+
             bpm_ph.markdown(style.format("Heart Rate", "bad" if (b_val > BPM_MAX or (b_val < BPM_MIN and b_val > 0)) else "good", f"{b_val:.1f}"), unsafe_allow_html=True)
             avg_ph.markdown(style.format("Avg BPM", "", f"{parsed['avg_bpm']:.0f}"), unsafe_allow_html=True)
             mq_ph.markdown(style.format("Air Quality", "bad" if mq_val > MQ_ALERT else "good", f"{mq_val:.0f}"), unsafe_allow_html=True)
