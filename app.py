@@ -62,12 +62,13 @@ def find_arduino_ports():
     all_ports = list(serial.tools.list_ports.comports())
     return [p.device for p in all_ports if any(kw in (p.description or "").lower() for kw in ["arduino", "usb", "uart", "cp210", "ch340", "espressif"])]
 
-def get_new_patient(name=None):
-    # Use the typed name if given, otherwise fall back to a random Faker name
+def get_new_patient(name=None, age=None):
+    # Use the typed name/age if given, otherwise fall back to random values
     final_name = name.strip() if name and name.strip() else fake.name()
+    final_age = int(age) if age and int(age) > 0 else random.randint(18, 85)
     return {
         "name": final_name,
-        "age": random.randint(18, 85),
+        "age": final_age,
         "id": fake.uuid4()[:8].upper(),
         "location": f"Ward {random.randint(1, 10)}, Bed {random.randint(1, 20)}",
         "condition": "Stable"
@@ -125,8 +126,9 @@ with st.sidebar:
 
     st.divider()
     patient_name_input = st.text_input("Patient Name", placeholder="Type patient name here")
+    patient_age_input = st.number_input("Patient Age", min_value=0, max_value=120, value=0, step=1, help="Leave at 0 for a random age")
     if st.button("🔄 New Patient Profile"):
-        st.session_state.patient = get_new_patient(patient_name_input)
+        st.session_state.patient = get_new_patient(patient_name_input, patient_age_input)
         st.session_state.raw.clear()
         st.session_state.full_log = []
 
@@ -230,3 +232,4 @@ if run:
                 last_ui_update = now
 
     if ser: ser.close()
+
