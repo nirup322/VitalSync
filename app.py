@@ -21,7 +21,8 @@ fake = Faker()
 BAUD_RATE_DEFAULT = 115200
 READ_TIMEOUT = 0.5
 TABLE_WINDOW_MIN = 5
-MQ_ALERT = 800
+MQ_GOOD_MAX = 500   # below this = Good
+MQ_ALERT = 800      # above this = Bad (between the two = Moderate)
 BPM_MAX = 130
 BPM_MIN = 50
 UI_UPDATE_INTERVAL = 0.8
@@ -73,6 +74,14 @@ def get_new_patient(name=None, age=None):
         "location": f"Ward {random.randint(1, 10)}, Bed {random.randint(1, 20)}",
         "condition": "Stable"
     }
+
+def air_quality_label(mq_val):
+    # Returns (css colour class, text label) for the Air Quality card
+    if mq_val > MQ_ALERT:
+        return "bad", "Bad"
+    if mq_val > MQ_GOOD_MAX:
+        return "warn", "Moderate"
+    return "good", "Good"
 
 def sim_step_faker(state, now):
     dt = 0.05
@@ -213,7 +222,8 @@ if run:
 
             bpm_ph.markdown(style.format("Heart Rate", "bad" if (b_val > BPM_MAX or (b_val < BPM_MIN and b_val > 0)) else "good", f"{b_val:.1f}"), unsafe_allow_html=True)
             avg_ph.markdown(style.format("Avg BPM", "", f"{parsed['avg_bpm']:.0f}"), unsafe_allow_html=True)
-            mq_ph.markdown(style.format("Air Quality", "bad" if mq_val > MQ_ALERT else "good", f"{mq_val:.0f}"), unsafe_allow_html=True)
+            aq_class, aq_text = air_quality_label(mq_val)
+            mq_ph.markdown(style.format("Air Quality", aq_class, aq_text), unsafe_allow_html=True)
             ecg_stat_ph.markdown(style.format("Leads", "bad" if lo else "good", "OFF" if lo else "OK"), unsafe_allow_html=True)
 
             # Alerts
@@ -232,4 +242,3 @@ if run:
                 last_ui_update = now
 
     if ser: ser.close()
-
