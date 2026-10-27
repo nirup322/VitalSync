@@ -189,56 +189,59 @@ if run:
             st.stop()
 
     last_ui_update = 0
-    while run:
-        now = time.time()
-        parsed = None
+    try:
+        while run:
+            now = time.time()
+            parsed = None
 
-        if mode == "Faker Simulation":
-            parsed = sim_step_faker(st.session_state.sim_state, now)
-            time.sleep(0.05)
-        else:
-            try:
-                line = ser.readline().decode("utf-8", errors="ignore").strip()
-                if line:
-                    match = LINE_PATTERN.search(line)
-                    if match:
-                        ecg, lo_plus, lo_minus, mq, ir, red, bpm, avg_bpm = match.groups()
-                        parsed = {
-                            "ecg": float(ecg), "lo_plus": lo_plus, "mq": float(mq),
-                            "bpm": float(bpm), "avg_bpm": float(avg_bpm), "scenario": "Hardware Live"
-                        }
-            except Exception as e:
-                st.error(f"Serial Error: {e}")
-                break
+            if mode == "Faker Simulation":
+                parsed = sim_step_faker(st.session_state.sim_state, now)
+                time.sleep(0.05)
+            else:
+                try:
+                    line = ser.readline().decode("utf-8", errors="ignore").strip()
+                    if line:
+                        match = LINE_PATTERN.search(line)
+                        if match:
+                            ecg, lo_plus, lo_minus, mq, ir, red, bpm, avg_bpm = match.groups()
+                            parsed = {
+                                "ecg": float(ecg), "lo_plus": lo_plus, "mq": float(mq),
+                                "bpm": float(bpm), "avg_bpm": float(avg_bpm), "scenario": "Hardware Live"
+                            }
+                except Exception as e:
+                    st.error(f"Serial Error: {e}")
+                    break
 
-        if parsed:
-            parsed['t'] = now
-            st.session_state.raw.append(parsed)
-            st.session_state.full_log.append(parsed)
+            if parsed:
+                parsed['t'] = now
+                st.session_state.raw.append(parsed)
+                st.session_state.full_log.append(parsed)
 
-            # Metrics
-            style = '<div class="vg-card"><div class="lbl">{}</div><div class="val {}">{}</div></div>'
-            b_val, mq_val, lo = parsed['bpm'], parsed['mq'], parsed['lo_plus'] == '1'
+                # Metrics
+                style = '<div class="vg-card"><div class="lbl">{}</div><div class="val vg-{}">{}</div></div>'
+                b_val, mq_val, lo = parsed['bpm'], parsed['mq'], parsed['lo_plus'] == '1'
 
-            bpm_ph.markdown(style.format("Heart Rate", "bad" if (b_val > BPM_MAX or (b_val < BPM_MIN and b_val > 0)) else "good", f"{b_val:.1f}"), unsafe_allow_html=True)
-            avg_ph.markdown(style.format("Avg BPM", "", f"{parsed['avg_bpm']:.0f}"), unsafe_allow_html=True)
-            aq_class, aq_text = air_quality_label(mq_val)
-            mq_ph.markdown(style.format("Air Quality", aq_class, aq_text), unsafe_allow_html=True)
-            ecg_stat_ph.markdown(style.format("Leads", "bad" if lo else "good", "OFF" if lo else "OK"), unsafe_allow_html=True)
+                bpm_ph.markdown(style.format("Heart Rate", "bad" if (b_val > BPM_MAX or (b_val < BPM_MIN and b_val > 0)) else "good", f"{b_val:.1f}"), unsafe_allow_html=True)
+                avg_ph.markdown(style.format("Avg BPM", "", f"{parsed['avg_bpm']:.0f}"), unsafe_allow_html=True)
+                aq_class, aq_text = air_quality_label(mq_val)
+                mq_ph.markdown(style.format("Air Quality", aq_class, aq_text), unsafe_allow_html=True)
+                ecg_stat_ph.markdown(style.format("Leads", "bad" if lo else "good", "OFF" if lo else "OK"), unsafe_allow_html=True)
 
-            # Alerts
-            if lo: alert_ph.error(f"🚨 Patient {p['name']} ECG Leads Disconnected!")
-            elif b_val > BPM_MAX: alert_ph.error(f"🚨 Tachycardia Alert for {p['name']}! BPM: {b_val:.1f}")
-            elif mq_val > MQ_ALERT: alert_ph.warning(f"⚠️ Air Quality Hazard detected near {p['name']}!")
-            else: alert_ph.success(f"✅ Monitoring {p['name']}: {parsed['scenario']}")
+                # Alerts
+                if lo: alert_ph.error(f"🚨 Patient {p['name']} ECG Leads Disconnected!")
+                elif b_val > BPM_MAX: alert_ph.error(f"🚨 Tachycardia Alert for {p['name']}! BPM: {b_val:.1f}")
+                elif mq_val > MQ_ALERT: alert_ph.warning(f"⚠️ Air Quality Hazard detected near {p['name']}!")
+                else: alert_ph.success(f"✅ Monitoring {p['name']}: {parsed['scenario']}")
 
-            # Throttled Charts
-            if now - last_ui_update > UI_UPDATE_INTERVAL:
-                df = pd.DataFrame(list(st.session_state.raw))
-                df["time"] = pd.to_datetime(df["t"], unit='s')
-                ecg_chart_ph.plotly_chart(create_sensor_fig(df, "ecg", "ECG", COL_ACCENT, height=250), use_container_width=True)
-                bpm_chart_ph.plotly_chart(create_sensor_fig(df, "bpm", "BPM", COL_GOOD), use_container_width=True)
-                mq_chart_ph.plotly_chart(create_sensor_fig(df, "mq", "MQ", COL_WARN), use_container_width=True)
-                last_ui_update = now
+                # Throttled Charts
+                if now - last_ui_update > UI_UPDATE_INTERVAL:
+                    df = pd.DataFrame(list(st.session_state.raw))
+                    df["time"] = pd.to_datetime(df["t"], unit='s')
+                    ecg_chart_ph.plotly_chart(create_sensor_fig(df, "ecg", "ECG", COL_ACCENT, height=250), use_container_width=True)
+                    bpm_chart_ph.plotly_chart(create_sensor_fig(df, "bpm", "BPM", COL_GOOD), use_container_width=True)
+                    mq_chart_ph.plotly_chart(create_sensor_fig(df, "mq", "MQ", COL_WARN), use_container_width=True)
+                    last_ui_update = now
 
-    if ser: ser.close()
+    finally:
+        if ser:
+            ser.close()
