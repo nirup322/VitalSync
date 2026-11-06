@@ -74,6 +74,36 @@ def get_new_patient(name=None, age=None):
         "location": f"Ward {random.randint(1, 10)}, Bed {random.randint(1, 20)}",
         "condition": "Stable"
     }
+    def assess_condition(bpm, leads_off, mq_val):
+    """Returns (is_stable, list_of_reasons)."""
+    reasons = []
+    if leads_off:
+        reasons.append("ECG leads disconnected")
+    elif bpm > BPM_MAX:
+        reasons.append("high heart rate")
+    elif bpm < BPM_MIN:
+        reasons.append("low heart rate")
+    if mq_val > MQ_ALERT:
+        reasons.append("hazardous air")
+    return len(reasons) == 0, reasons
+
+def render_patient_box(placeholder, p, stable=None, reasons=None):
+    if stable is None:
+        status_html = f'<span style="color:{COL_MUTED}; font-weight:bold;">Waiting for readings...</span>'
+    elif stable:
+        status_html = f'<span class="vg-good" style="font-weight:bold;">The patient is in stable condition</span>'
+    else:
+        status_html = f'<span class="vg-bad" style="font-weight:bold;">The patient is unstable ({", ".join(reasons)})</span>'
+
+    placeholder.markdown(
+        f'<div class="patient-box">'
+        f'<span style="color:{COL_ACCENT}; font-weight:bold;">PATIENT:</span> {p["name"]} ({p["age"]}y) &nbsp;|&nbsp; '
+        f'<span style="color:{COL_ACCENT}; font-weight:bold;">LOC:</span> {p["location"]} &nbsp;|&nbsp; '
+        f'<span style="color:{COL_ACCENT}; font-weight:bold;">STATUS:</span> {status_html}'
+        f'</div>',
+        unsafe_allow_html=True
+    )
+    
 
 def air_quality_label(mq_val):
     # Returns (css colour class, text label) for the Air Quality card
@@ -162,7 +192,8 @@ with tab_live:
     c1, c2, c3, c4 = st.columns(4)
     bpm_ph, avg_ph, mq_ph, ecg_stat_ph = c1.empty(), c2.empty(), c3.empty(), c4.empty()
 
-    st.markdown('<p class="chart-title">ECG WAVEFORM (AD8232)</p>', unsafe_allow_html=True)
+    patient_ph = st.empty()
+render_patient_box(patient_ph, p)
     ecg_chart_ph = st.empty()
     g1, g2 = st.columns(2)
     with g1:
